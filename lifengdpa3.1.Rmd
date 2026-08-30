@@ -1,0 +1,81 @@
+---
+title: "APM 1205: Formative Assessment 1"
+subtitle: "Part A - Initial Examination of the Data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+```
+
+## Part A – Initial Examination of the Data
+
+### a) Data Inspection and Measurement Roles
+
+```{r load-data}
+# Load the data directly from the online file
+url <- "https://raw.githubusercontent.com/resbaz/r-novice-gapminder-files/master/data/gapminder-FiveYearData.csv"
+gapminder_all <- read.csv(url)
+
+# Filter for the year 2007
+gapminder_2007 <- gapminder_all %>% filter(year == 2007)
+
+# Show rows and columns
+dim(gapminder_2007)
+```
+
+* **Dimensions:** The dataset contains **142 observations** (countries) and **6 variables**.
+* **Measurement Roles:** 
+  * `lifeExp` is the **Response Variable ($Y$)**.
+  * `gdpPercap` is the **Explanatory Variable ($X$)**.
+
+***
+
+### b) Numerical Summaries
+
+```{r summaries}
+# Generate basic summary statistics
+gapminder_2007 %>% 
+  select(lifeExp, gdpPercap) %>% 
+  summary()
+```
+
+* **Center and Spread:**
+  * **Life Expectancy:** The median is **71.94 years**, which sits higher than the mean of **67.01 years**. It ranges across a spread from **39.61** to **82.61 years**.
+  * **GDP per Capita:** The median is **\$6,124**, while the mean is much higher at **\$11,680**. It has a massive spread ranging from **\$277** to **\$49,357**.
+
+***
+
+### c) Graphical Distributions (Histograms)
+
+```{r histograms, fig.show="hold", out.width="50%"}
+# Histogram for Life Expectancy
+ggplot(gapminder_2007, aes(x = lifeExp)) +
+  geom_histogram(fill = "blue", color = "white", bins = 20) +
+  labs(title = "Distribution of Life Expectancy (2007)", x = "Years", y = "Count")
+
+# Histogram for GDP per Capita
+ggplot(gapminder_2007, aes(x = gdpPercap)) +
+  geom_histogram(fill = "orange", color = "white", bins = 20) +
+  labs(title = "Distribution of GDP per Capita (2007)", x = "USD", y = "Count")
+```
+
+* **Shape & Skewness:**
+  * **Life Expectancy:** The distribution is **left-skewed** (negatively skewed), as most countries cluster toward the higher end.
+  * **GDP per Capita:** The distribution is heavily **right-skewed** (positively skewed), with most countries packed at low income levels and a few rich nations stretching far to the right.
+
+***
+
+### d) Boxplots and Outliers
+
+```{r boxplot, fig.width=6, fig.height=3}
+# Boxplot for GDP per Capita to check for outliers
+ggplot(gapminder_2007, aes(x = gdpPercap)) +
+  geom_boxplot(fill = "lightgray") +
+  labs(title = "Boxplot of GDP per Capita (2007)", x = "USD")
+```
+
+* **Observations Deserving Further Examination:** The boxplot for `gdpPercap` shows several individual points (dots) past the right whisker boundary. These are extreme **high-income outliers** that will exert an undue pull on a standard linear regression model.
+

@@ -1,0 +1,100 @@
+---
+title: "APM 1205: Formative Assessment 1"
+subtitle: "Part D - Regression Comparison"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r load-data, include=FALSE}
+# Re-load the data so the knitting environment can find it
+url <- "https://raw.githubusercontent.com/resbaz/r-novice-gapminder-files/master/data/gapminder-FiveYearData.csv"
+gapminder_all <- read.csv(url)
+gapminder_2007 <- gapminder_all %>% filter(year == 2007)
+```
+
+## Part D – Compare Regression Descriptions
+
+We fit two separate ordinary least squares (OLS) linear models to compare the raw-scale relationship against the log-transformed relationship:
+* **Model 1 (Raw Scale):** $\text{lifeExp} = \alpha + \beta(\text{gdpPercap}) + \varepsilon$
+* **Model 2 (Log Scale):** $\text{lifeExp} = \alpha + \beta(\log(\text{gdpPercap})) + \varepsilon$
+
+### a) Model Estimation and Fitted Equations
+
+```{r fit-regression-models}
+# Fit Model 1: Original raw scale
+model1 <- lm(lifeExp ~ gdpPercap, data = gapminder_2007)
+summary(model1)
+
+# Fit Model 2: Log-transformed scale
+model2 <- lm(lifeExp ~ log(gdpPercap), data = gapminder_2007)
+summary(model2)
+```
+
+* **Fitted Equation 1 (Model 1):** $\widehat{\text{lifeExp}} = 59.62 + 0.00063(\text{gdpPercap})$
+* **Fitted Equation 2 (Model 2):** $\widehat{\text{lifeExp}} = -9.10 + 9.38(\log(\text{gdpPercap}))$
+
+***
+
+### b) Numerical Model Comparison
+
+```{r numerical-comparison}
+# Extract R-squared and Residual Standard Error (RSE) programmatically
+m1_summary <- summary(model1)
+m2_summary <- summary(model2)
+
+performance_comparison <- data.frame(
+  Metric = c("R-squared (R2)", "Residual Standard Error (RSE)"),
+  Model_1_Raw = c(m1_summary$r.squared, m1_summary$sigma),
+  Model_2_Log = c(m2_summary$r.squared, m2_summary$sigma)
+)
+print(performance_comparison)
+```
+
+* **Numerical Evaluation:**
+  * **Model 1 ($R^2 \approx 0.46$, $\text{RSE} \approx 8.82$):** Explains only about 46% of the variance in global life expectancy. The typical prediction error is roughly 8.8 years.
+  * **Model 2 ($R^2 \approx 0.61$, $\text{RSE} \approx 7.50$):** Explains over 61% of the total variance, marking a substantial performance boost. It also lowers the typical prediction error to 7.5 years.
+
+***
+
+### c) Residual Diagnostics (Nonlinearity and Unequal Spread)
+
+To verify ordinary least squares assumptions, we construct residual-versus-fitted-value plots for both models.
+
+```{r residual-plots, fig.show="hold", out.width="50%"}
+# Residual plot for Model 1
+ggplot(model1, aes(x = .fitted, y = .resid)) +
+  geom_point(color = "blue", alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  geom_smooth(method = "loess", se = FALSE, color = "darkblue", linewidth = 1) +
+  labs(title = "Model 1 (Raw Scale) Residual Plot", x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
+
+# Residual plot for Model 2
+ggplot(model2, aes(x = .fitted, y = .resid)) +
+  geom_point(color = "darkgreen", alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  geom_smooth(method = "loess", se = FALSE, color = "darkgreen", linewidth = 1) +
+  labs(title = "Model 2 (Log Scale) Residual Plot", x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
+```
+
+* **Residual Patterns:**
+  * **Model 1:** The residual pattern exhibits severe **nonlinearity**. It displays a strong, distinct parabolic "U-shape" where the LOESS trend curves away from the horizontal zero reference line. It also demonstrates **heteroscedasticity** (unequal spread), with a massive dispersion bubble at lower fitted values that tightly constricts at higher intervals.
+  * **Model 2:** The residual pattern confirms that the **log transformation successfully satisfies the regression assumptions**. The dots are evenly distributed above and below the horizontal line across all prediction scales, and the LOESS trend remains flat and balanced along the center line.
+
+***
+
+### d) Final Model Selection
+**Model 2 (the Log-transformed model) is heavily favored** over Model 1 based on both numerical and graphical evidence:
+1. **Numerical Evidence:** Model 2 provides a much stronger fit, increasing the explained variance ($R^2$) by roughly 15% and lowering the typical standard error of prediction by over a year.
+2. **Graphical Evidence:** The residual diagnostics for Model 1 show clear evidence of structural misspecification (curved trends and changing variance). In contrast, Model 2's residual plot displays an ideal random cloud profile, confirming that the transformation restored structural linearity and stabilized variation across the domain.
+
+***
+
+### e) Causal Limitations
+An important limitation of this analysis is that **correlation does not imply causation**. We cannot conclude that increasing a nation's GDP per capita will directly cause an immediate, systematic increase in its population's life expectancy. This simple bivariate association likely suffers from **omitted variable bias**; underlying confounding factors—such as institutional stability, public healthcare infrastructure investments, access to clean drinking water, and education rates—co-vary with GDP and drive structural gains in human longevity.

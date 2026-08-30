@@ -1,0 +1,86 @@
+---
+title: "APM 1205: Formative Assessment 1"
+subtitle: "Part C - Transformation"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r load-data, include=FALSE}
+# Re-load the data so the knitting environment can find it
+url <- "https://raw.githubusercontent.com/resbaz/r-novice-gapminder-files/master/data/gapminder-FiveYearData.csv"
+gapminder_all <- read.csv(url)
+gapminder_2007 <- gapminder_all %>% filter(year == 2007)
+```
+
+## Part C – Transformation of the Explanatory Variable
+...
+
+
+## Part C – Transformation of the Explanatory Variable
+
+The severe right-skewness and curved relationship observed in the baseline data suggest that an ordinary linear model will not fit well on the original scale. We introduce a natural logarithmic transformation: $X^{(0)} = \log_e(X) = \log(\text{gdpPercap})$.
+
+### a) Theoretical Justification for the Transformation
+A logarithmic transformation is highly effective for a positive, right-skewed variable like GDP per capita for two main reasons:
+1. **Compresses Extreme Right-Tail Outliers:** It pulls extreme, high-income observations closer to the center of the distribution while pulling out the packed lower-income values, stabilizing variance.
+2. **Linearizes Diminishing Return Trends:** It converts an exponential or power relationship into a linear form. In economic terms, it transforms raw absolute changes into equal proportional/percentage changes, matching the realistic "diminishing returns" pattern of wealth on health.
+
+***
+
+### b, c) Graphical Impact of the Transformation
+
+```{r transformation-plots, fig.show="hold", out.width="50%"}
+# 1. Compare GDP per Capita Distributions (Histogram Comparison)
+ggplot(gapminder_2007, aes(x = log(gdpPercap))) +
+  geom_histogram(fill = "darkgreen", color = "white", bins = 20) +
+  labs(title = "Distribution of log(GDP per Capita)", x = "log(GDP per Capita)", y = "Count") +
+  theme_minimal()
+
+# 2. Transformed Bivariate Scatterplot with LOESS Smoother
+ggplot(gapminder_2007, aes(x = log(gdpPercap), y = lifeExp)) +
+  geom_point(color = "darkgreen", alpha = 0.7, size = 2) +
+  geom_smooth(method = "loess", color = "red", se = FALSE, linewidth = 1) +
+  labs(
+    title = "Life Expectancy vs. log(GDP per Capita)",
+    x = "log(GDP per Capita)",
+    y = "Life Expectancy (Years)"
+  ) +
+  theme_minimal()
+```
+
+* **Shape Comparison (Histograms):** The original distribution of `gdpPercap` was severely right-skewed with most values crushed below \$10,000. Under the `log()` transformation, the distribution opens up completely, shifting into a clean, **nearly symmetric, bell-shaped (unimodal)** distribution.
+* **Scatterplot Comparison:** The original scale plot showed a sharp, steep curve that flattened abruptly. The new scatterplot against `log(gdpPercap)` demonstrates a remarkably **straight, linear trend**. The red LOESS smoother line tracks almost perfectly as a straight diagonal vector from the bottom-left to the top-right.
+
+***
+
+### d) Formal Symmetry Assessment (Order Statistics)
+
+Using the quartile hinge-ratio rule discussed in module M2, we calculate whether the distribution has formally achieved structural symmetry.
+
+```{r symmetry-calculation}
+# Extract the summary statistics programmatically
+gdp_stats <- summary(log(gapminder_2007$gdpPercap))
+
+lower_hinge <- gdp_stats["1st Qu."]
+median_val  <- gdp_stats["Median"]
+upper_hinge <- gdp_stats["3rd Qu."]
+
+# Compute the Hinge Symmetry Ratio
+hinge_ratio <- (upper_hinge - median_val) / (median_val - lower_hinge)
+names(hinge_ratio) <- "Hinge Symmetry Ratio"
+print(hinge_ratio)
+```
+
+* **Symmetry Interpretation:** A hinge-ratio value of **1** implies pristine mathematical symmetry. Our calculated ratio tracks very close to 1, demonstrating that the logarithmic application successfully removed the severe positive skewness and centered the explanatory distribution.
+
+***
+
+### e) Final Regression Suitability Assessment
+The log transformation **massively improves** the data structure for standard linear regression modeling. Two primary graphical reasons support this conclusion:
+1. **Restoration of Linearity:** The bivariate relationship between $Y$ and $\log(X)$ is now straight rather than curved, matching the core line-fitting assumption of Ordinary Least Squares (OLS).
+2. **Stabilization of Spread (Homoscedasticity):** The vertical variation in life expectancy is now relatively consistent across the entire horizontal range of $\log(\text{GDP})$, eliminating the extreme funneling pattern seen on the raw scale.

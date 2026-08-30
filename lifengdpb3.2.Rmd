@@ -1,0 +1,116 @@
+---
+title: "APM 1205: Formative Assessment 1"
+subtitle: "Examining Data, Transformation, and Regression"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Configure global chunk options and load required visualization packages
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+```
+
+## Part A – Initial Examination of the Data
+
+### a) Data Inspection and Variable Measurement Roles
+
+```{r load-data}
+# Download the raw dataset directly from the official online repository
+url <- "https://raw.githubusercontent.com/resbaz/r-novice-gapminder-files/master/data/gapminder-FiveYearData.csv"
+gapminder_all <- read.csv(url)
+
+# Filter explicitly for country-level cross-sectional data observed in 2007
+gapminder_2007 <- gapminder_all %>% filter(year == 2007)
+
+# Display dataset dimensions (rows and columns)
+dim(gapminder_2007)
+```
+
+* **Dataset Dimensions:** The isolated subset contains exactly **142 observations** (countries) across **6 variables**.
+* **Statistical Modeling Roles:** 
+  * `lifeExp` serves as the quantitative **Response Variable ($Y$)** / Dependent Variable.
+  * `gdpPercap` serves as the primary quantitative **Explanatory Variable ($X$)** / Independent Predictor.
+
+***
+
+### b) Numerical Summary Metrics
+
+```{r summaries}
+# Generate baseline descriptive statistics for key parameters
+gapminder_2007 %>% 
+  select(lifeExp, gdpPercap) %>% 
+  summary()
+```
+
+* **Center and Spread Insights:**
+  * **Life Expectancy ($Y$):** Displays a median center of **71.94 years** and a mean of **67.01 years**, spreading across an overall range from a minimum of **39.61** to a maximum of **82.61 years**.
+  * **GDP per Capita ($X$):** Exhibits a median center of **\$6,124**, whereas the mean is heavily pulled rightward to **\$11,680** due to high-value dispersion. The spread ranges from an impoverished minimum of **\$277** to an affluent maximum of **\$49,357**.
+
+***
+
+### c) Univariate Distributions (Shape & Skewness)
+
+```{r histograms, fig.show="hold", out.width="50%"}
+# Construct density histogram for the response variable
+ggplot(gapminder_2007, aes(x = lifeExp)) +
+  geom_histogram(fill = "blue", color = "white", bins = 20) +
+  labs(title = "Distribution of Life Expectancy (2007)", x = "Life Expectancy (Years)", y = "Count")
+
+# Construct density histogram for the explanatory variable
+ggplot(gapminder_2007, aes(x = gdpPercap)) +
+  geom_histogram(fill = "orange", color = "white", bins = 20) +
+  labs(title = "Distribution of GDP per Capita (2007)", x = "GDP per Capita (USD)", y = "Count")
+```
+
+* **Distributional Characteristics:**
+  * **Life Expectancy:** Displays a distinct **left-skew (negative skewness)**. A clear majority of nations pack closely inside the upper health bound (70+ years), anchored by a long trailing left tail.
+  * **GDP per Capita:** Exhibits a severe **right-skew (positive skewness)**. The primary mass of global data is compressed below \$10,000, while a small elite group of rich nations creates a highly elongated right tail.
+
+***
+
+### d) Outlier Isolation via Boxplots
+
+```{r boxplot, fig.width=6, fig.height=3}
+# Create horizontal boxplot profile to evaluate dispersion boundaries
+ggplot(gapminder_2007, aes(x = gdpPercap)) +
+  geom_boxplot(fill = "lightgray") +
+  labs(title = "Boxplot Profile: GDP per Capita (2007)", x = "GDP per Capita (USD)")
+```
+
+* **Observations Deserving Further Examination:** The boxplot flags several isolated individual data points stretching past the upper statistical whisker line. These represent extreme **high-income outliers** that will exert severe leverage over an ordinary least squares linear regression model.
+
+***
+***
+
+## Part B – Examine the Bivariate Relationship
+
+### a, b) Scatterplot with LOESS Smoother
+
+```{r scatterplot-loess, fig.width=7, fig.height=5}
+# Construct bivariate scatterplot linking Y to X with an overlaid LOESS trend line
+ggplot(gapminder_2007, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point(color = "darkblue", alpha = 0.7, size = 2) +
+  geom_smooth(method = "loess", color = "red", se = FALSE, linewidth = 1) +
+  labs(
+    title = "Bivariate Association: Life Expectancy vs. GDP per Capita (2007)",
+    x = "GDP per Capita (USD)",
+    y = "Life Expectancy (Years)"
+  ) +
+  theme_minimal()
+```
+
+### Written Interpretation for Your Report
+
+* **a) Relationship Description:** 
+  * **Direction:** The association is strictly **positive**; as a nation's wealth expands, the survival age scales upward.
+  * **Form:** Distinctly **non-linear (curved)**. The relationship ascends steeply at lower horizontal intervals and then visibly plateaus at upper wealth levels.
+  * **Strength:** Visually **strong**, showing a cohesive progression, though dispersion increases in mid-tier economies.
+  * **Spread:** Highly **unequal (heteroscedastic)**. Vertical variation is vast among poorer nations (ranging from 40 to 75 years) but becomes exceptionally narrow among wealthy nations, which tightly cluster near the 80-year baseline.
+
+* **b) LOESS Smoother Suggestions:** The LOESS trend line highlights a relationship with **diminishing marginal returns**. Initial economic changes provide immense life expectancy gains for low-income populations. However, once an economy passes roughly \$15,000–\$20,000 GDP per capita, further wealth growth yields marginal increases in longevity.
+
+* **c) Adequacy of a Straight-Line Model:** A simple straight line is **fundamentally inadequate**. A linear fit would severely violate structural regression assumptions. It fails the assumption of **linearity** due to the pronounced curve, violates **homoscedasticity** due to changing variance across the horizontal axis, and would suffer from distortion as high-income outliers pull the trend line away from the primary data cluster.
+
+* **d) Connection to Anscombe's Quartet:** Anscombe's Quartet illustrates that vastly different data structures can share identical numerical summaries (like means, variances, and correlations). Relying blindly on numeric metrics without inspecting a scatterplot first masks critical characteristics like non-linearity or structural anomalies. Plotting beforehand ensures the chosen model reflects the true shape of the data.
+
